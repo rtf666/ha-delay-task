@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.rtf.redis.AppRedisConnectionAutoConfiguration
+com.rtf.delaytask.config.AppDelayQueueServiceAutoConfiguration

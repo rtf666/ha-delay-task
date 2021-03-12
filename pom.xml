@@ -5,29 +5,25 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.github.rtf666</groupId>
-    <artifactId>redis-sdk-plus</artifactId>
-    <version>1.0.4</version>
+    <artifactId>ha-delay-task</artifactId>
+    <version>0.0.1</version>
 
-    <name>redis-sdk-plus</name>
-    <description>redis-sdk-plus</description>
-    <url>https://github.com/rtf666/redis-sdk-plus</url>
+    <name>ha-delay-task</name>
+    <description>ha-delay-task</description>
+    <url>https://github.com/rtf666/ha-delay-task</url>
 
     <properties>
         <java.version>1.8</java.version>
+        <!--源码的编码方式-->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
-
+        <!--easyokhttp-->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-            <version>2.0.5.RELEASE</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-pool2</artifactId>
-            <version>2.6.1</version>
+            <groupId>com.mzlion</groupId>
+            <artifactId>easy-okhttp</artifactId>
+            <version>1.1.0</version>
         </dependency>
 
         <dependency>
@@ -37,16 +33,46 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>25.1-jre</version>
-            <scope>provided</scope>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <version>2.0.5.RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <version>2.0.5.RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.5</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>3.2.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.11</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.1.10</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>25.1-jre</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -79,8 +105,8 @@
     </developers>
 
     <scm>
-        <connection>https://github.com/rtf666/redis-sdk-plus.git</connection>
-        <url>https://github.com/rtf666/redis-sdk-plus</url>
+        <connection>https://github.com/rtf666/ha-delay-task.git</connection>
+        <url>https://github.com/rtf666/ha-delay-task</url>
     </scm>
 
     <build>
