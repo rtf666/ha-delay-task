@@ -13,5 +13,5 @@ import com.rtf.delaytask.AppDelayTask;
  */
 public interface AppLocalControlDelayTaskService {
 
-	void excute(AppDelayTask task);
+	void execute(AppDelayTask task);
 }

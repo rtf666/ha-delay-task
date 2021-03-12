@@ -3,7 +3,7 @@ package com.rtf.delaytask.impl.task;
 import com.alibaba.fastjson.JSON;
 import com.rtf.delaytask.AppDelayTask;
 import com.rtf.delaytask.AppDelayTaskService;
-import com.rtf.delaytask.config.AppDelayQueueProperties;
+import com.rtf.delaytask.config.AppDelayTaskProperties;
 import com.rtf.delaytask.lock.DistributedLock;
 import com.rtf.delaytask.lock.DistributedLocker;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ public class AppDelayTaskUpdateThread extends Thread {
 
     private StringRedisTemplate stringRedisTemplate ;
 
-    private AppDelayQueueProperties delayQueueProperties ;
+    private AppDelayTaskProperties appDelayTaskProperties ;
 
     private DistributedLocker distributedLocker ;
 
@@ -33,7 +33,7 @@ public class AppDelayTaskUpdateThread extends Thread {
         super("数据库更新任务");
         this.appDelayTaskService = applicationContext.getBean( AppDelayTaskService.class ) ;
         this.stringRedisTemplate = applicationContext.getBean( StringRedisTemplate.class ) ;
-        this.delayQueueProperties = applicationContext.getBean( AppDelayQueueProperties.class ) ;
+        this.appDelayTaskProperties = applicationContext.getBean( AppDelayTaskProperties.class ) ;
         this.distributedLocker = applicationContext.getBean( DistributedLocker.class ) ;
     }
 
@@ -42,7 +42,7 @@ public class AppDelayTaskUpdateThread extends Thread {
      */
     public void pauseAndWait(){
         try {
-            Thread.currentThread().sleep( delayQueueProperties.getEmptyTaskInterval() );
+            Thread.currentThread().sleep( appDelayTaskProperties.getEmptyTaskInterval() );
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -51,18 +51,18 @@ public class AppDelayTaskUpdateThread extends Thread {
     @Override
     public void run() {
         // 每次获取元素的数量
-        int updateNumOnce = delayQueueProperties.getUpdateRecordSize() ;
+        int updateNumOnce = appDelayTaskProperties.getUpdateRecordSize() ;
 
         while (true){
             DistributedLock updateLock = null ;
             try{
-                updateLock = distributedLocker.acquire("dbupdate" , delayQueueProperties.getUpdateLockTimeout()*1000L) ;
+                updateLock = distributedLocker.acquire("dbupdate" , appDelayTaskProperties.getUpdateLockTimeout()*1000L) ;
                 if( updateLock == null ){
                     pauseAndWait() ;
                     continue ;
                 }
                 // 1. 从redis中获取更新任务。如果获取失败，则暂停固定时间间隔
-                List<String> delayTaskJsonList = stringRedisTemplate.opsForList().range( delayQueueProperties.getUpdateQueueName() , 0 , updateNumOnce - 1 ) ;
+                List<String> delayTaskJsonList = stringRedisTemplate.opsForList().range( appDelayTaskProperties.getUpdateQueueName() , 0 , updateNumOnce - 1 ) ;
                 // 如果没有任务则等待
                 if( delayTaskJsonList==null || delayTaskJsonList.size()<1 ){
                     pauseAndWait() ;
@@ -74,15 +74,15 @@ public class AppDelayTaskUpdateThread extends Thread {
                     AppDelayTask appDelayTask = JSON.parseObject( delayTaskJson , AppDelayTask.class ) ;
                     appDelayTaskService.syncDelayTaskToDB( appDelayTask ) ;
                     // 如果每次更新允许数据库存在时间间隔，则暂停
-                    if( delayQueueProperties.getUpdateDbInterval()>0 ){
-                        Thread.currentThread().sleep( delayQueueProperties.getUpdateDbInterval() ) ;
+                    if( appDelayTaskProperties.getUpdateDbInterval()>0 ){
+                        Thread.currentThread().sleep( appDelayTaskProperties.getUpdateDbInterval() ) ;
                     }
                 }
                 // 3. 移除已经更新的元素，仅保留后续的所有的元素
-                stringRedisTemplate.opsForList().trim( delayQueueProperties.getUpdateQueueName() , delayTaskJsonList.size()  , -1 ) ;
+                stringRedisTemplate.opsForList().trim( appDelayTaskProperties.getUpdateQueueName() , delayTaskJsonList.size()  , -1 ) ;
 
                 // 4. 等待固定的时间间隔后，再开始下一次消费
-                Thread.currentThread().sleep( delayQueueProperties.getConsumeInterval() ) ;
+                Thread.currentThread().sleep( appDelayTaskProperties.getConsumeInterval() ) ;
             }catch( Exception e ){
                 log.error( "同步更新任务状态失败: {}" , e.getClass().getName()+",message:"+e.getMessage() ) ;
             }finally {

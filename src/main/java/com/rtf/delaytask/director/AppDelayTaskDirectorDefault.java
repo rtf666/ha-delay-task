@@ -2,7 +2,7 @@ package com.rtf.delaytask.director;
 
 import com.alibaba.fastjson.JSON;
 import com.rtf.delaytask.AppDelayTask;
-import com.rtf.delaytask.config.AppDelayQueueProperties;
+import com.rtf.delaytask.config.AppDelayTaskProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +23,7 @@ public class AppDelayTaskDirectorDefault implements AppDelayTaskDirector {
     private StringRedisTemplate stringRedisTemplate ;
 
     @Autowired
-    private AppDelayQueueProperties delayQueueProperties ;
+    private AppDelayTaskProperties appDelayTaskProperties ;
 
     /**
      * 获取任务的唯一标识
@@ -79,13 +79,13 @@ public class AppDelayTaskDirectorDefault implements AppDelayTaskDirector {
     public void dispatchTasks(double score) {
         // 获取延迟任务列表 , 最多获取100个
         Set<String> delayTasks = stringRedisTemplate.opsForZSet().rangeByScore(
-                delayQueueProperties.getDelayQueueName() , 0 ,score , 0 ,100) ;
+                appDelayTaskProperties.getDelayQueueName() , 0 ,score , 0 ,100) ;
         if( delayTasks==null || delayTasks.size()<1 ){
             return ;
         }
 
         // 将延迟任务加到执行队列
-        stringRedisTemplate.opsForList().rightPushAll( delayQueueProperties.getExecQueueName() , delayTasks ) ;
+        stringRedisTemplate.opsForList().rightPushAll( appDelayTaskProperties.getExecQueueName() , delayTasks ) ;
 
         // 清理已经获取到的延时队列
         for (String delayTask : delayTasks) {
@@ -96,7 +96,7 @@ public class AppDelayTaskDirectorDefault implements AppDelayTaskDirector {
 //            deleteDelayTask( appDelayTask ) ;
 
             // 删除待分配的任务
-            stringRedisTemplate.opsForZSet().remove( delayQueueProperties.getDelayQueueName() , delayTask ) ;
+            stringRedisTemplate.opsForZSet().remove( appDelayTaskProperties.getDelayQueueName() , delayTask ) ;
 
             try{
                 // 派发任务后，执行任务

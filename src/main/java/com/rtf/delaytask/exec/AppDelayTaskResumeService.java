@@ -2,7 +2,7 @@ package com.rtf.delaytask.exec;
 
 import com.alibaba.fastjson.JSON;
 import com.rtf.delaytask.AppDelayTask;
-import com.rtf.delaytask.config.AppDelayQueueProperties;
+import com.rtf.delaytask.config.AppDelayTaskProperties;
 import com.rtf.delaytask.impl.AppDelayTaskServiceImpl;
 import com.rtf.delaytask.lock.DistributedLock;
 import com.rtf.delaytask.lock.DistributedLocker;
@@ -24,7 +24,7 @@ public class AppDelayTaskResumeService {
     public static final Long RESUME_CHECK_INTERVAL  = 1000*60*2L ;
 
     @Autowired
-    private AppDelayQueueProperties delayQueueProperties ;
+    private AppDelayTaskProperties appDelayTaskProperties ;
 
     @Autowired
     private AppDelayTaskServiceImpl delayTaskService ;
@@ -42,7 +42,7 @@ public class AppDelayTaskResumeService {
     public void scheduleDelayTask(){
         // 获取延迟队列的分布式锁，默认20秒
         DistributedLock distributedLock = distributedLocker.acquire(
-                delayQueueProperties.getDelayQueueName()+"resumelock" , RESUME_CHECK_INTERVAL - 1000 ) ;
+                appDelayTaskProperties.getDelayQueueName()+"resumelock" , RESUME_CHECK_INTERVAL - 1000 ) ;
         if( distributedLock == null ){
             log.error("延迟任务恢复获取分布式锁失败" );
             return;

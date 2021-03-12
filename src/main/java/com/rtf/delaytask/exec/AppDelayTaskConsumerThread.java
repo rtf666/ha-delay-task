@@ -4,7 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.google.common.collect.Lists;
 import com.rtf.delaytask.AppDelayTask;
 import com.rtf.delaytask.AppDelayTaskService;
-import com.rtf.delaytask.config.AppDelayQueueProperties;
+import com.rtf.delaytask.config.AppDelayTaskProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationContext;
@@ -23,7 +23,7 @@ public class AppDelayTaskConsumerThread extends Thread {
 
 //    private RedisScript<String> scriptConsume = new DefaultRedisScript<String>(AppDelayTaskConsumerRecord.CONSUME_SCRIPT, String.class) ;
 
-    private AppDelayQueueProperties delayQueueProperties ;
+    private AppDelayTaskProperties appDelayTaskProperties ;
 
     private StringRedisTemplate stringRedisTemplate ;
 
@@ -41,7 +41,7 @@ public class AppDelayTaskConsumerThread extends Thread {
                                       ApplicationContext applicationContext ,
                                       Map<String, AppDelayTaskConsumer> appDelayTaskConsumers ){
         super(name) ;
-        this.delayQueueProperties = applicationContext.getBean( AppDelayQueueProperties.class ) ;
+        this.appDelayTaskProperties = applicationContext.getBean( AppDelayTaskProperties.class ) ;
         this.stringRedisTemplate = applicationContext.getBean( StringRedisTemplate.class ) ;
         this.delayTaskService = applicationContext.getBean( AppDelayTaskService.class ) ;
         this.appDelayTaskConsumeAware = applicationContext.getBean( AppDelayTaskConsumeAware.class ) ;
@@ -90,7 +90,7 @@ public class AppDelayTaskConsumerThread extends Thread {
             try{
                 delayTaskJson = queryTodoAppDelayTask() ;
                 if( StringUtils.isBlank( delayTaskJson ) || StringUtils.equalsIgnoreCase( delayTaskJson , "null" ) ){
-                    Thread.currentThread().sleep( delayQueueProperties.getEmptyTaskInterval() );
+                    Thread.currentThread().sleep( appDelayTaskProperties.getEmptyTaskInterval() );
                     continue;
                 }
                 appDelayTask = JSON.parseObject( delayTaskJson , AppDelayTask.class ) ;
@@ -119,7 +119,7 @@ public class AppDelayTaskConsumerThread extends Thread {
             }
 
             try{
-                Thread.currentThread().sleep( delayQueueProperties.getConsumeInterval() ) ;
+                Thread.currentThread().sleep( appDelayTaskProperties.getConsumeInterval() ) ;
             }catch( Exception e ){
                 log.error( "任务执行完成后等待异常: {}" , e.getMessage() ) ;
             }

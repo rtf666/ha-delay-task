@@ -7,7 +7,7 @@ import com.mzlion.easyokhttp.HttpClient;
 import com.mzlion.easyokhttp.request.AbsHttpRequest;
 import com.mzlion.easyokhttp.response.HttpResponse;
 import com.rtf.delaytask.AppDelayTask;
-import com.rtf.delaytask.config.AppDelayQueueProperties;
+import com.rtf.delaytask.config.AppDelayTaskProperties;
 import com.rtf.delaytask.exec.AppDelayTaskConsumeAware;
 import com.rtf.delaytask.exec.AppDelayTaskConsumeResult;
 import com.rtf.delaytask.exec.AppDelayTaskConsumer;
@@ -35,7 +35,7 @@ public class AppHttpDelayTaskConsumer implements AppDelayTaskConsumer, Initializ
     private static HttpClient httpClient ;
 
     @Autowired
-    private AppDelayQueueProperties delayQueueProperties ;
+    private AppDelayTaskProperties appDelayTaskProperties ;
 
     @Autowired
     private AppDelayTaskConsumeAware appDelayTaskConsumeAware ;
@@ -71,7 +71,7 @@ public class AppHttpDelayTaskConsumer implements AppDelayTaskConsumer, Initializ
             String message = "exception: "+ e.getClass().getName() +" , message : "+ e.getMessage() ;
             // 应用连接超时
             if( StringUtils.indexOfIgnoreCase( e.getMessage() , "SocketTimeoutException" ) != -1 ){
-                message = "连接超时，超时时间: "+delayQueueProperties.getHttpConnectTimeout()+"s。" ;
+                message = "连接超时，超时时间: "+appDelayTaskProperties.getHttpConnectTimeout()+"s。" ;
             }
             consumeResult.setMessage( message ) ;
             log.error("请求执行异常: {} , {}" , JSON.toJSONString(appDelayTask) , e.getClass().getName() +" , message : "+ e.getMessage());
@@ -112,8 +112,8 @@ public class AppHttpDelayTaskConsumer implements AppDelayTaskConsumer, Initializ
         }
 
         // 3. 设置连接超时和读超时时间
-        absHttpRequest.connectTimeout( delayQueueProperties.getHttpConnectTimeout() ) ;
-        absHttpRequest.readTimeout( delayQueueProperties.getHttpReadTimeout() ) ;
+        absHttpRequest.connectTimeout( appDelayTaskProperties.getHttpConnectTimeout() ) ;
+        absHttpRequest.readTimeout( appDelayTaskProperties.getHttpReadTimeout() ) ;
 
         return absHttpRequest ;
     }

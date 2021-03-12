@@ -36,7 +36,7 @@ public class AppLocalControlDelayTaskConsumer implements AppDelayTaskConsumer {
 
 		try {
 			AppLocalControlDelayTaskService localTask = applicationContext.getBean(appDelayTask.getUrl(), AppLocalControlDelayTaskService.class);
-			localTask.excute(appDelayTask);
+			localTask.execute(appDelayTask);
 
 		} catch (Exception e) {
 

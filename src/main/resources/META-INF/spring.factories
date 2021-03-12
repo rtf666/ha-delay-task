@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-com.rtf.delaytask.config.AppDelayQueueServiceAutoConfiguration
+com.rtf.delaytask.config.AppDelayTaskAutoConfiguration

@@ -1,6 +1,6 @@
 package com.rtf.delaytask.exec;
 
-import com.rtf.delaytask.config.AppDelayQueueProperties;
+import com.rtf.delaytask.config.AppDelayTaskProperties;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 public class AppDelayTaskExecutor implements InitializingBean {
 
     @Autowired
-    private AppDelayQueueProperties delayQueueProperties ;
+    private AppDelayTaskProperties appDelayTaskProperties ;
 
     private ThreadPoolExecutor threadPoolExecutor = null ;
 
@@ -44,16 +44,16 @@ public class AppDelayTaskExecutor implements InitializingBean {
      * 开启消费任务
      */
     public void startConsumeTask(){
-        if ( !delayQueueProperties.getEnableConsume() ) {
+        if ( !appDelayTaskProperties.getEnableConsume() ) {
             return;
         }
 
-        threadPoolExecutor = new ThreadPoolExecutor( delayQueueProperties.getConsumeTaskNum() , delayQueueProperties.getConsumeTaskNum() ,
+        threadPoolExecutor = new ThreadPoolExecutor( appDelayTaskProperties.getConsumeTaskNum() , appDelayTaskProperties.getConsumeTaskNum() ,
                 5, TimeUnit.MINUTES,
                 new LinkedBlockingQueue<Runnable>(100)) ;
 
         // 创建消费任务
-        for (int i = 0 ; i < delayQueueProperties.getConsumeTaskNum() ; i++ ){
+        for (int i = 0 ; i < appDelayTaskProperties.getConsumeTaskNum() ; i++ ){
             AppDelayTaskConsumerThread appDelayTaskConsumerThread = new AppDelayTaskConsumerThread("delaytask-"+(i+1) ,
                     applicationContext,
                     appDelayTaskConsumers

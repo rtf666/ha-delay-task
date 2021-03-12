@@ -13,7 +13,6 @@ import com.rtf.delaytask.impl.AppDelayTaskServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -31,19 +30,8 @@ import java.util.List;
 @Slf4j
 @Configuration
 @ComponentScan(basePackages = "com.rtf.delaytask")
-@EnableConfigurationProperties(AppDelayQueueProperties.class)
-public class AppDelayQueueServiceAutoConfiguration {
-
-	/**
-	 * 初始化任务调度器配置
-	 * @return
-	 */
-	@Bean
-	@ConditionalOnProperty(prefix = "app.delayqueue", name = "enable-consume", havingValue = "true", matchIfMissing = false)
-	public AppSchedulingConfiguration appSchedulingConfiguration() {
-		log.debug("初始化任务调度器配置，允许启用回调配置");
-		return new AppSchedulingConfiguration();
-	}
+@EnableConfigurationProperties(AppDelayTaskProperties.class)
+public class AppDelayTaskAutoConfiguration {
 
 	@ConditionalOnMissingBean(AppDelayTaskService.class)
 	@Bean
@@ -130,6 +118,10 @@ public class AppDelayQueueServiceAutoConfiguration {
 		return new AppDelayTaskConsumerRecord();
 	}
 
+	/**
+	 * 恢复未执行完成的任务
+	 * @return
+	 */
 	@Bean
 	public AppDelayTaskResumeService appDelayTaskResumeService() {
 		return new AppDelayTaskResumeService();

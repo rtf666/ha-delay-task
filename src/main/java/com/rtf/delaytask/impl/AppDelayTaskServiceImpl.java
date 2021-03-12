@@ -2,7 +2,7 @@ package com.rtf.delaytask.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.rtf.delaytask.*;
-import com.rtf.delaytask.config.AppDelayQueueProperties;
+import com.rtf.delaytask.config.AppDelayTaskProperties;
 import com.rtf.delaytask.director.AppDelayTaskDirector;
 import com.rtf.delaytask.impl.dao.AppDelayTaskDao;
 import com.rtf.delaytask.impl.task.AppDelayTaskUpdateThread;
@@ -45,7 +45,7 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 	private AppDelayTaskDao appDelayTaskDao ;
 
 	@Autowired
-	private AppDelayQueueProperties delayQueueProperties;
+	private AppDelayTaskProperties appDelayTaskProperties;
 
 	@Autowired
 	private StringRedisTemplate stringRedisTemplate;
@@ -133,15 +133,15 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 
 		// 设置最大重试次数，为空或小于0，则设置为默认最大重试次数
 		if (delayTask.getMaxRetry() == null || delayTask.getMaxRetry() < 0) {
-			delayTask.setMaxRetry(delayQueueProperties.getMaxRetry());
+			delayTask.setMaxRetry(appDelayTaskProperties.getMaxRetry());
 		}
 		// 失败任务执行时间间隔，不能小于最小时间间隔
-		if (delayTask.getDelayStep() == null || delayTask.getDelayStep() < delayQueueProperties.getMinDelayStep()) {
-			delayTask.setDelayStep(delayQueueProperties.getMinDelayStep());
+		if (delayTask.getDelayStep() == null || delayTask.getDelayStep() < appDelayTaskProperties.getMinDelayStep()) {
+			delayTask.setDelayStep(appDelayTaskProperties.getMinDelayStep());
 		}
 
 		// 设置延迟队列名称，暂不允许自定义
-		delayTask.setQueueName(delayQueueProperties.getDelayQueueName());
+		delayTask.setQueueName(appDelayTaskProperties.getDelayQueueName());
 		if (delayTask.getStartDelay() == null || delayTask.getStartDelay() < 1) {
 			delayTask.setStartDelay(0);
 		}
@@ -237,11 +237,11 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 
 	@Scheduled(fixedRate = 1000 * SCHEDULE_PERIOD)
 	public void scheduleDelayTask() {
-		if (!delayQueueProperties.getEnableScheduleTask()) {
+		if (!appDelayTaskProperties.getEnableScheduleTask()) {
 			return;
 		}
 		// 获取延迟队列的分布式锁，默认20秒
-		DistributedLock distributedLock = distributedLocker.acquire(delayQueueProperties.getDelayQueueName() + "lock", 20000L);
+		DistributedLock distributedLock = distributedLocker.acquire(appDelayTaskProperties.getDelayQueueName() + "lock", 20000L);
 		if (distributedLock == null) {
 			log.error("延迟队列获取分布式锁失败");
 			return;
@@ -251,7 +251,7 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 			// 获取分数
 			double score = Long.parseLong(AppDelayTaskPriority.LOW.getRemark() + System.currentTimeMillis());
 			// 等待队列的个数
-			//            long zSetSize = stringRedisTemplate.opsForZSet().size( delayQueueProperties.getDelayQueueName() ) ;
+			//            long zSetSize = stringRedisTemplate.opsForZSet().size( appDelayTaskProperties.getDelayQueueName() ) ;
 			//            log.info("等待队列中任务个数: {}" , zSetSize);
 
 			// 清理已经获取到的延时队列
@@ -276,7 +276,7 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 			return null;
 		}
 
-		String resultJson = stringRedisTemplate.opsForValue().get(delayQueueProperties.getExecResultName() + ":" + delayTaskId);
+		String resultJson = stringRedisTemplate.opsForValue().get(appDelayTaskProperties.getExecResultName() + ":" + delayTaskId);
 
 		AppDelayTaskResult appDelayTaskResult = null;
 		if (StringUtils.isNotBlank(resultJson)) {
@@ -310,13 +310,13 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 		AppDelayTaskResult delayTaskResult = new AppDelayTaskResult();
 		delayTaskResult.setSuccess(execSuccess);
 		delayTaskResult.setEndTime(appDelayTask.getEndTime());
-		stringRedisTemplate.opsForValue().set(delayQueueProperties.getExecResultName() + ":" + appDelayTask.getId(),
+		stringRedisTemplate.opsForValue().set(appDelayTaskProperties.getExecResultName() + ":" + appDelayTask.getId(),
 				JSON.toJSONString(delayTaskResult), 60, TimeUnit.MINUTES);
 
 		// 2.2 将已经执行完成的任务推送到更新队列
-		if (StringUtils.equalsIgnoreCase(delayQueueProperties.getExecLogLevel(), "all")
-				|| (StringUtils.equalsIgnoreCase(delayQueueProperties.getExecLogLevel(), "error") && !appDelayTask.getSuccess())) {
-			stringRedisTemplate.opsForList().rightPush(delayQueueProperties.getUpdateQueueName(), JSON.toJSONString(appDelayTask));
+		if (StringUtils.equalsIgnoreCase(appDelayTaskProperties.getExecLogLevel(), "all")
+				|| (StringUtils.equalsIgnoreCase(appDelayTaskProperties.getExecLogLevel(), "error") && !appDelayTask.getSuccess())) {
+			stringRedisTemplate.opsForList().rightPush(appDelayTaskProperties.getUpdateQueueName(), JSON.toJSONString(appDelayTask));
 		}
 
 		// 3. 查询最新的任务信息是否为循环任务。如果任务存在并且是循环任务，则更新当前的任务状态
@@ -346,8 +346,8 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 		}
 
 		// 2. 保存任务执行日志。针对all 或 error级别的日志记录
-		if (StringUtils.equalsIgnoreCase(delayQueueProperties.getExecLogLevel(), "all")
-				|| (StringUtils.equalsIgnoreCase(delayQueueProperties.getExecLogLevel(), "error") && !appDelayTask.getSuccess())) {
+		if (StringUtils.equalsIgnoreCase(appDelayTaskProperties.getExecLogLevel(), "all")
+				|| (StringUtils.equalsIgnoreCase(appDelayTaskProperties.getExecLogLevel(), "error") && !appDelayTask.getSuccess())) {
 			appDelayTaskLogService.saveDelayTaskLog(appDelayTask);
 		}
 	}

@@ -2,7 +2,7 @@ package com.rtf.delaytask.exec;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.rtf.delaytask.config.AppDelayQueueProperties;
+import com.rtf.delaytask.config.AppDelayTaskProperties;
 import com.rtf.delaytask.lock.DistributedLock;
 import com.rtf.delaytask.lock.DistributedLocker;
 import lombok.extern.slf4j.Slf4j;
@@ -22,16 +22,8 @@ import java.util.Set;
 @Slf4j
 public class AppDelayTaskConsumerRecord  {
 
-    // 消费脚本
-//    public static final String CONSUME_SCRIPT = "local result = redis.call('LPOP',KEYS[1]) " +
-//            "if (result) then" +
-//            "   local current_time = tonumber(ARGV[1])" +
-//            "   redis.call('ZADD' , KEYS[2] , current_time , result)" +
-//            "end " +
-//            "return result";
-
     @Autowired
-    private AppDelayQueueProperties delayQueueProperties ;
+    private AppDelayTaskProperties appDelayTaskProperties ;
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate ;
@@ -45,7 +37,7 @@ public class AppDelayTaskConsumerRecord  {
      */
     public List<String> startConsumes(){
         // 1. 获取分布式锁，保证只有一个消费任务执行
-        DistributedLock distributedLock = distributedLocker.acquire(delayQueueProperties.getExecutingQueueName()+":locker" , 30*1000L) ;
+        DistributedLock distributedLock = distributedLocker.acquire(appDelayTaskProperties.getExecutingQueueName()+":locker" , 30*1000L) ;
         if( distributedLock==null ){
             return Lists.newArrayListWithExpectedSize(1) ;
         }
@@ -54,8 +46,8 @@ public class AppDelayTaskConsumerRecord  {
 
         try{
             // 2.1 获取指定数量的任务
-            targetTasks = stringRedisTemplate.opsForList().range( delayQueueProperties.getExecQueueName() ,
-                    0 , delayQueueProperties.getConsumePrefetch() - 1 ) ;
+            targetTasks = stringRedisTemplate.opsForList().range( appDelayTaskProperties.getExecQueueName() ,
+                    0 , appDelayTaskProperties.getConsumePrefetch() - 1 ) ;
             if( targetTasks==null || targetTasks.size()<1 ){
                 return Lists.newArrayListWithExpectedSize(1) ;
             }
@@ -67,12 +59,12 @@ public class AppDelayTaskConsumerRecord  {
                     continue;
                 }
                 currentIndex ++ ;
-                stringRedisTemplate.opsForZSet().add( delayQueueProperties.getExecutingQueueName() , targetTask ,
+                stringRedisTemplate.opsForZSet().add( appDelayTaskProperties.getExecutingQueueName() , targetTask ,
                         System.currentTimeMillis() + currentIndex * 2000 ) ;
             }
 
             // 2.3 移除已有的数据
-            stringRedisTemplate.opsForList().trim( delayQueueProperties.getExecQueueName() , targetTasks.size() , -1 ) ;
+            stringRedisTemplate.opsForList().trim( appDelayTaskProperties.getExecQueueName() , targetTasks.size() , -1 ) ;
         }catch( Exception e ){
             log.error( "获取消费任务异常 : {}" , e.getMessage() ) ;
         }finally {
@@ -87,7 +79,7 @@ public class AppDelayTaskConsumerRecord  {
      * @param delayTaskJson
      */
     public void completeConsume(String delayTaskJson){
-        stringRedisTemplate.opsForZSet().remove( delayQueueProperties.getExecutingQueueName() , delayTaskJson ) ;
+        stringRedisTemplate.opsForZSet().remove( appDelayTaskProperties.getExecutingQueueName() , delayTaskJson ) ;
     }
 
     /**
@@ -96,7 +88,7 @@ public class AppDelayTaskConsumerRecord  {
      * @return
      */
     public Set<String> getResumeTasks(long targetTime){
-        Set<String> delayTaskJsons = stringRedisTemplate.opsForZSet().rangeByScore( delayQueueProperties.getExecutingQueueName() ,
+        Set<String> delayTaskJsons = stringRedisTemplate.opsForZSet().rangeByScore( appDelayTaskProperties.getExecutingQueueName() ,
                 0 , targetTime , 0 , 100 ) ;
         if( delayTaskJsons==null || delayTaskJsons.size()<1 ){
             return Sets.newHashSetWithExpectedSize( 1 ) ;
@@ -115,7 +107,7 @@ public class AppDelayTaskConsumerRecord  {
         }
 
         // 移除已经执行完成的数据
-        stringRedisTemplate.opsForZSet().remove( delayQueueProperties.getExecutingQueueName() ,
+        stringRedisTemplate.opsForZSet().remove( appDelayTaskProperties.getExecutingQueueName() ,
                 delayTaskJsons.toArray( new String[]{} ) ) ;
 
     }

@@ -6,8 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Setter
 @Getter
-@ConfigurationProperties(prefix = "app.delayqueue")
-public class AppDelayQueueProperties {
+@ConfigurationProperties(prefix = "rtf.delaytask")
+public class AppDelayTaskProperties {
 
     /**
      * 是否开启延迟队列的消费任务
