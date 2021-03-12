@@ -25,6 +25,7 @@ public class AppDelayTaskLogServiceImpl implements AppDelayTaskLogService {
         appDelayTaskLog.setRetryNum( delayTask.getRetryNum() ) ;
         appDelayTaskLog.setFailReason( delayTask.getFailReason() ) ;
         appDelayTaskLog.setSuccess( delayTask.getSuccess() ) ;
+        appDelayTaskLog.setStartTime( delayTask.getStartTime() ) ;
         appDelayTaskLog.setEndTime( delayTask.getEndTime() ) ;
 
         appDelayTaskLogDao.save( appDelayTaskLog ) ;

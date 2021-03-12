@@ -87,19 +87,13 @@ public class AppDelayTask implements Serializable {
 	private Integer maxRetry = 10;
 
 	/**
-	 * 队列重试次数
-	 */
-	@Column(name = "retry_queue_num")
-	private Integer retryQueueNum = 0;
-
-	/**
 	 * 标识是否完成，0未完成，1完成（包括失败和成功）
 	 */
 	@Column(name = "complete")
 	private Integer complete = 0;
 
 	/**
-	 * 优先级 越小优先
+	 * 优先级 越小优先。默认为中级
 	 */
 	@Column(name = "priority")
 	private AppDelayTaskPriority priority = AppDelayTaskPriority.MIDDLE;
@@ -117,25 +111,31 @@ public class AppDelayTask implements Serializable {
 	private String source = "";
 
 	/**
-	 * 实际重试次数
+	 * 开始时间，临时存储
+	 */
+	@Transient
+	private Date startTime ;
+
+	/**
+	 * 实际重试次数，临时存储
 	 */
 	@Transient
 	private Integer retryNum = 0;
 
 	/**
-	 * 是否成功，不用于存储数据库表字段
+	 * 是否成功，不用于存储数据库表字段，临时存储
 	 */
 	@Transient
 	private Boolean success = false;
 
 	/**
-	 * 失败原因
+	 * 失败原因，临时存储
 	 */
 	@Transient
 	private String failReason;
 
 	/**
-	 * 结束时间
+	 * 结束时间，临时存储
 	 */
 	@Transient
 	private Date endTime;

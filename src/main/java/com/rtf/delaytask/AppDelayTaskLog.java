@@ -57,6 +57,13 @@ public class AppDelayTaskLog implements Serializable {
     private String failReason ;
 
     /**
+     * 开始时间
+     */
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "start_time")
+    private Date startTime ;
+
+    /**
      * 结束时间
      */
     @Temporal(TemporalType.TIMESTAMP)

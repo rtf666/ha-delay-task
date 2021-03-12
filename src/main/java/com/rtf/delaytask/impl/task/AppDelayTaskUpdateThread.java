@@ -62,7 +62,8 @@ public class AppDelayTaskUpdateThread extends Thread {
                     continue ;
                 }
                 // 1. 从redis中获取更新任务。如果获取失败，则暂停固定时间间隔
-                List<String> delayTaskJsonList = stringRedisTemplate.opsForList().range( appDelayTaskProperties.getUpdateQueueName() , 0 , updateNumOnce - 1 ) ;
+                List<String> delayTaskJsonList = stringRedisTemplate.opsForList().range( appDelayTaskProperties.getUpdateQueueName() ,
+                        0 , updateNumOnce - 1 ) ;
                 // 如果没有任务则等待
                 if( delayTaskJsonList==null || delayTaskJsonList.size()<1 ){
                     pauseAndWait() ;

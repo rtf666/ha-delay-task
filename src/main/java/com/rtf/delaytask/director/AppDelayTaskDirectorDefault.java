@@ -45,20 +45,12 @@ public class AppDelayTaskDirectorDefault implements AppDelayTaskDirector {
             return;
         }
 
-//        if( hasDelayTask( delayTask ) ){
-//            log.info("已经存在延迟任务:{}" , JSON.toJSONString( delayTask )) ;
-//            return ;
-//        }
-
         String delayTaskJson = JSON.toJSONString( delayTask ) ;
         if( StringUtils.isBlank( delayTaskJson ) || StringUtils.equalsIgnoreCase( delayTaskJson , "null" ) ){
             return;
         }
 
         stringRedisTemplate.opsForZSet().add( delayTask.getQueueName() , delayTaskJson , score ) ;
-
-        // 存储已经创建&待运行的任务
-//        stringRedisTemplate.opsForSet().add( TASK_IDS ,  getDelayTaskId( delayTask ) ) ;
 
         try{
             doAfterTaskCreated( delayTask ) ;

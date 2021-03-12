@@ -79,7 +79,8 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		// 初始化更新任务的线程
-		updateThreadPoolExecutor = new ThreadPoolExecutor(2, 2, 5, TimeUnit.MINUTES, new LinkedBlockingQueue<Runnable>(100));
+		updateThreadPoolExecutor = new ThreadPoolExecutor(2, 2, 5,
+				TimeUnit.MINUTES, new LinkedBlockingQueue<Runnable>(100));
 
 		updateThreadPoolExecutor.submit(new AppDelayTaskUpdateThread(applicationContext));
 	}
@@ -124,9 +125,8 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 	public Long createDelayTask(AppDelayTask delayTask) {
 		Assert.notNull(delayTask, "对象不能为空");
 
-		//        delayTask.setFailReason( null ) ;
+		// 实际重试次数为0
 		delayTask.setRetryNum(0);
-
 		// 设置为未完成，未完成状态
 		delayTask.setComplete(0);
 		delayTask.setSuccess(false);
@@ -160,23 +160,23 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 	 */
 	private void pushToDelayQueue(AppDelayTask delayTask, long failNum) {
 		Assert.hasText(delayTask.getQueueName(), "延迟队列名称不能为空");
-		// 排序分数使用当前时间
-		double score = 0;
+
 		if (delayTask.getPriority() == null) {
 			delayTask.setPriority(AppDelayTaskPriority.MIDDLE);
 		}
+
+		// 计算优先级，排序分数由两部分构成：优先级、当前时间、延迟时间；第一次执行根据优先级进行，失败重试时，根据最低优先级。
+		double score = 0;
 		if (failNum < 1) {
 			score = Long.parseLong(delayTask.getPriority().getRemark() + (System.currentTimeMillis() + delayTask.getStartDelay() * 1000));
 		} else {
 			score = Long.parseLong(AppDelayTaskPriority.LOW.getRemark() + (System.currentTimeMillis() + failNum * delayTask.getDelayStep() * 1000));
 		}
-
 		score = score - (SCHEDULE_PERIOD * 1000);
 
-		//        // 删除已有的延迟任务，避免无法正常创建
-		//        if( deleteExist ){
-		//            appDelayTaskDirector.deleteDelayTask( delayTask ) ;
-		//        }
+		// 设置本次开始时间
+		delayTask.setStartTime( new Date() ) ;
+
 		appDelayTaskDirector.createTask(delayTask, score);
 	}
 
@@ -197,16 +197,18 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 	@Override
 	public boolean retryAfterFail(AppDelayTask delayTask) {
 
+		// 获取失败的记录
 		String taskFailNumKey = getFailNumCacheKey(delayTask);
 		long failNums = stringRedisTemplate.opsForValue().increment(taskFailNumKey, 1);
 
 		// 记录key的失效时间 , 为了保证不失效，失败次数存储1小时
 		stringRedisTemplate.expire(taskFailNumKey, 1, TimeUnit.HOURS);
 
-		// 最大重试次数，小于实际失败次数
-		boolean continueRetry = failNums <= delayTask.getMaxRetry();
 		// 设置重试次数
 		delayTask.setRetryNum(Long.valueOf(failNums).intValue());
+
+		// 最大重试次数，小于实际失败次数
+		boolean continueRetry = failNums <= delayTask.getMaxRetry();
 		// 是否继续重试
 		if (continueRetry) {
 			// 允许重试，则保留失败任务数量1个小时
@@ -256,7 +258,6 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 
 			// 清理已经获取到的延时队列
 			appDelayTaskDirector.dispatchTasks(score);
-
 		} catch (Exception e) {
 			log.error("获取等待队列任务异常: {}", e.getMessage());
 		} finally {
@@ -313,24 +314,21 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 		stringRedisTemplate.opsForValue().set(appDelayTaskProperties.getExecResultName() + ":" + appDelayTask.getId(),
 				JSON.toJSONString(delayTaskResult), 60, TimeUnit.MINUTES);
 
-		// 2.2 将已经执行完成的任务推送到更新队列
-		if (StringUtils.equalsIgnoreCase(appDelayTaskProperties.getExecLogLevel(), "all")
-				|| (StringUtils.equalsIgnoreCase(appDelayTaskProperties.getExecLogLevel(), "error") && !appDelayTask.getSuccess())) {
-			stringRedisTemplate.opsForList().rightPush(appDelayTaskProperties.getUpdateQueueName(), JSON.toJSONString(appDelayTask));
-		}
-
 		// 3. 查询最新的任务信息是否为循环任务。如果任务存在并且是循环任务，则更新当前的任务状态
-		AppDelayTask currentAppDelayTask = get(appDelayTask.getId());
-
-		// 4. 将完成的任务推送的更新队列
-		appDelayTask.setCircle(false);
-		if (currentAppDelayTask != null) {
-			// 4.1 如果是循环任务则重新推送
-			if (currentAppDelayTask.getCircle()) {
-				appDelayTask.setCircle(true);
-				pushToDelayQueue(currentAppDelayTask, 0);
-			}
+		AppDelayTask currentAppDelayTask = get(appDelayTask.getId()) ;
+		if( currentAppDelayTask==null ){
+			return;
 		}
+
+		// 4. 记录结果
+		appDelayTask.setCircle(false) ;
+		// 4.1 如果是循环任务则重新创建任务并推送
+		if ( currentAppDelayTask.getCircle() ) {
+			appDelayTask.setCircle(true);
+			pushToDelayQueue(currentAppDelayTask, 0);
+		}
+		// 4.2 记录本次执行记录
+		stringRedisTemplate.opsForList().rightPush(appDelayTaskProperties.getUpdateQueueName(), JSON.toJSONString(appDelayTask));
 
 	}
 
@@ -340,16 +338,11 @@ public class AppDelayTaskServiceImpl implements AppDelayTaskService, Initializin
 		// 1. 如果不是循环任务，则在任务执行完成之后设置为完成状态
 		if (!appDelayTask.getCircle()) {
 			appDelayTask.setComplete(1);
-
 			this.appDelayTaskDao.updateComplete( appDelayTask.getId() , appDelayTask.getComplete() ) ;
-//			this.update(appDelayTask, Lists.newArrayList("complete"));
 		}
 
-		// 2. 保存任务执行日志。针对all 或 error级别的日志记录
-		if (StringUtils.equalsIgnoreCase(appDelayTaskProperties.getExecLogLevel(), "all")
-				|| (StringUtils.equalsIgnoreCase(appDelayTaskProperties.getExecLogLevel(), "error") && !appDelayTask.getSuccess())) {
-			appDelayTaskLogService.saveDelayTaskLog(appDelayTask);
-		}
+		// 2. 保存任务执行日志。
+		appDelayTaskLogService.saveDelayTaskLog(appDelayTask);
 	}
 
 }

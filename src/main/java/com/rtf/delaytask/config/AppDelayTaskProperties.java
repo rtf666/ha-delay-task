@@ -60,11 +60,6 @@ public class AppDelayTaskProperties {
     private Integer updateDbInterval = 50 ;
 
     /**
-     * 记录日志的级别，包括：all(所有日志)、error(错误日志)
-     */
-    private String execLogLevel = "error" ;
-
-    /**
      * 执行队列的名称
      */
     private String execQueueName = "delay:exec:tasks";
